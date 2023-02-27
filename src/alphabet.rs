@@ -1,3 +1,5 @@
+// enum Alphabet represents alphabets in propositional logic.
+// Letter represents a propositional letter.
 pub enum Alphabet {
     Letter(char),
     True,
