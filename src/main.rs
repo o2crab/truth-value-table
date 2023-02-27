@@ -19,8 +19,12 @@ fn main() {
     }
     println!();
 
-    println!("{}, {}",
+    let v = vec![
         Alphabet::True,
         Alphabet::False,
-    );
+        Alphabet::Equivalence,
+    ];
+    for x in v {
+        println!("{}", x);
+    }
 }
