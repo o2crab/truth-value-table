@@ -1,4 +1,5 @@
 mod alphabet;
+mod formula;
 
 use alphabet::Alphabet;
 
