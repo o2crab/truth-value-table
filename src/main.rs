@@ -2,6 +2,7 @@ mod alphabet;
 mod formula;
 
 use alphabet::Alphabet;
+use formula::Formula;
 
 fn main() {
     let formula = vec![
@@ -28,4 +29,22 @@ fn main() {
     for x in v {
         println!("{}", x);
     }
+
+    let formula = Formula::Conjunction(
+        Box::new(Formula::Letter('P')),
+        Box::new(Formula::Implicature(
+            Box::new(Formula::Letter('P')),
+            Box::new(Formula::Letter('Q'))
+        ))
+    );
+    println!("{}", formula);
+
+    let formula = Formula::Implicature(
+        Box::new(Formula::Conjunction(
+            Box::new(Formula::Letter('P')),
+            Box::new(Formula::Letter('P'))
+        )),
+        Box::new(Formula::Letter('Q'))
+    );
+    println!("{}", formula);
 }
