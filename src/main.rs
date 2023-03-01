@@ -2,7 +2,7 @@ mod alphabet;
 mod formula;
 
 use alphabet::Alphabet;
-use formula::Formula;
+use formula::{Formula, SecondaryFuncName::*};
 
 fn main() {
     let formula = vec![
@@ -30,21 +30,33 @@ fn main() {
         println!("{}", x);
     }
 
-    let formula = Formula::Conjunction(
-        Box::new(Formula::Letter('P')),
-        Box::new(Formula::Implicature(
-            Box::new(Formula::Letter('P')),
-            Box::new(Formula::Letter('Q'))
-        ))
-    );
+    let formula =
+        Formula::SecondaryFunc {
+            name: Conjunction,
+            lhs: Box::new(Formula::Letter('P')),
+            rhs: 
+                Box::new(
+                    Formula::SecondaryFunc {
+                        name: Implicature,
+                        lhs: Box::new(Formula::Letter('P')),
+                        rhs: Box::new(Formula::Letter('Q'))
+                    }
+                )
+        };
     println!("{}", formula);
 
-    let formula = Formula::Implicature(
-        Box::new(Formula::Conjunction(
-            Box::new(Formula::Letter('P')),
-            Box::new(Formula::Letter('P'))
-        )),
-        Box::new(Formula::Letter('Q'))
-    );
+    let formula =
+        Formula::SecondaryFunc {
+            name: Implicature,
+            lhs:
+                Box::new(
+                    Formula::SecondaryFunc {
+                        name: Conjunction,
+                        lhs: Box::new(Formula::Letter('P')),
+                        rhs: Box::new(Formula::Letter('Q'))
+                    }
+                ),
+            rhs: Box::new(Formula::Letter('P'))
+        };
     println!("{}", formula);
 }
