@@ -68,3 +68,219 @@ impl Formula {
         }
     }
 }
+
+
+#[cfg(test)]
+mod fmt_tests {
+    use super::{Formula::*, SecondaryFuncName::*};
+
+    #[test]
+    fn fmt_letter() {
+        assert_eq!(
+            format!(
+                "{}",
+                Letter('P')),
+            String::from("P")
+        );
+    }
+
+
+    #[test]
+    fn fmt_true() {
+        assert_eq!(
+            format!(
+                "{}",
+                True
+            ),
+            String::from("⊤")
+        );
+    }
+    #[test]
+    fn fmt_false() {
+        assert_eq!(
+            format!(
+                "{}",
+                False
+            ),
+            String::from("⊥")
+        );
+    }
+
+    #[test]
+    fn fmt_negation() {
+        assert_eq!(
+            format!(
+                "{}",
+                Negation(
+                    Box::new( Letter('P') )
+                )
+            ),
+            String::from("¬ P")
+        );
+    }
+
+    #[test]
+    fn fmt_conjunction() {
+        assert_eq!(
+            format!(
+                "{}",
+                SecondaryFunc {
+                    name: Conjunction,
+                    lhs: Box::new( Letter('P') ),
+                    rhs: Box::new( Letter('Q') )}
+            ),
+            String::from("P ∧ Q")
+        );
+    }
+
+    #[test]
+    fn fmt_disjunction() {
+        assert_eq!(
+            format!(
+                "{}",
+                SecondaryFunc {
+                    name: Disjunction,
+                    lhs: Box::new( Letter('P') ),
+                    rhs: Box::new( Letter('Q') )}
+            ),
+            String::from("P ∨ Q")
+        );
+    }
+
+    #[test]
+    fn fmt_implicature() {
+        assert_eq!(
+            format!(
+                "{}",
+                SecondaryFunc {
+                    name: Implicature,
+                    lhs: Box::new( Letter('P') ),
+                    rhs: Box::new( Letter('Q') )}
+            ),
+            String::from("P → Q")
+        );
+    }
+
+    #[test]
+    fn fmt_equivalence() {
+        assert_eq!(
+            format!(
+                "{}",
+                SecondaryFunc {
+                    name: Equivalence,
+                    lhs: Box::new( Letter('P') ),
+                    rhs: Box::new( Letter('Q') )
+                }
+            ),
+            String::from("P ↔ Q")
+        );
+    }
+
+    #[test]
+    fn parentheses_for_same_precedence() {
+        assert_eq!(
+            format!(
+                "{}",
+                SecondaryFunc {
+                    name: Conjunction,
+                    lhs: Box::new( Letter('P') ),
+                    rhs: Box::new(
+                        SecondaryFunc {
+                            name: Conjunction,
+                            lhs: Box::new( Letter('Q') ),
+                            rhs: Box::new( Letter('R') )
+                        }
+                    )
+                }
+            ),
+            String::from("P ∧ (Q ∧ R)")
+        );
+    }
+
+    #[test]
+    fn parentheses_for_lower_precedence() {
+        // lhs
+        assert_eq!(
+            format!(
+                "{}",
+                SecondaryFunc {
+                    name: Conjunction,
+                    lhs: Box::new(
+                        SecondaryFunc {
+                            name: Implicature,
+                            lhs: Box::new( Letter('P') ),
+                            rhs: Box::new( Letter('Q') )
+                        }
+                    ),
+                    rhs: Box::new( Letter('R') )
+                }
+            ),
+            String::from("(P → Q) ∧ R")
+        );
+
+        // rhs
+        assert_eq!(
+            format!(
+                "{}",
+                SecondaryFunc {
+                    name: Conjunction,
+                    lhs: Box::new( Letter('P') ),
+                    rhs: Box::new(
+                        SecondaryFunc {
+                            name: Implicature,
+                            lhs: Box::new( Letter('Q') ),
+                            rhs: Box::new( Letter('R') )
+                        }
+                    )
+                }
+            ),
+            String::from("P ∧ (Q → R)")
+        );
+    }
+
+    #[test]
+    fn no_parentheses_for_higher_precedence() {
+        // lhs
+        assert_eq!(
+            format!(
+                "{}",
+                SecondaryFunc {
+                    name: Implicature,
+                    lhs: Box::new(
+                        SecondaryFunc {
+                            name: Conjunction,
+                            lhs: Box::new( Letter('P') ),
+                            rhs: Box::new( Letter('Q') )
+                        }
+                    ),
+                    rhs: Box::new( Letter('R') )
+                }
+            ),
+            String::from("P ∧ Q → R")
+        );
+
+        // rhs
+        assert_eq!(
+            format!(
+                "{}",
+                SecondaryFunc {
+                    name: Implicature,
+                    lhs: Box::new( Letter('P') ),
+                    rhs: Box::new(
+                        SecondaryFunc {
+                            name: Conjunction,
+                            lhs: Box::new( Letter('Q') ),
+                            rhs: Box::new( Letter('R') )
+                        }
+                    )
+                }
+            ),
+            String::from("P → Q ∧ R")
+        );
+    }
+}
+
+// ∧
+// ∨
+// →
+// ↔
