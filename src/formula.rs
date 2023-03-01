@@ -33,13 +33,13 @@ impl std::fmt::Display for Formula {
                         SecondaryFuncName::Equivalence => "↔", // ↔: \u{2194}
                     };
                 let lhs =
-                    if lhs.precidence() < self.precidence() {
+                    if lhs.precidence() <= self.precidence() {
                         format!("({})", *lhs)
                     } else {
                         lhs.to_string()
                     };
                 let rhs =
-                    if rhs.precidence() < self.precidence() {
+                    if rhs.precidence() <= self.precidence() {
                         format!("({})", *rhs)
                     } else {
                         rhs.to_string()
