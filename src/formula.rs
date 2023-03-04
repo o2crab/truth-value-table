@@ -1,3 +1,4 @@
+#[derive(PartialEq, Eq, Debug)]
 pub enum SecondaryFuncName {
     Conjunction,
     Disjunction,
@@ -5,6 +6,7 @@ pub enum SecondaryFuncName {
     Equivalence,
 }
 
+#[derive(PartialEq, Eq, Debug)]
 pub enum Formula {
     Letter(char),
     True,
@@ -65,6 +67,42 @@ impl Formula {
             Self::True              => 5,
             Self::False             => 5,
             Self::Letter(..)        => 5, // the highest precedence
+        }
+    }
+
+    // construct a Formula from an array of alphabets
+    pub fn parse(arr: &[crate::alphabet::Alphabet]) -> Result<Self, ()> {
+        use crate::alphabet::Alphabet;
+        match arr {
+            [x] => {
+                match *x {
+                    Alphabet::Letter(c) => Ok(Formula::Letter(c)),
+                    Alphabet::True => Ok(Formula::True),
+                    Alphabet::False => Ok(Formula::False),
+                    _ => Err(())
+                }
+            },
+            [Alphabet::Negation, tail @ ..] => {
+                if let Ok(x) = Self::parse(tail) {
+                    Ok(Formula::Negation(
+                        Box::new(x)
+                    ))
+                } else {
+                    Err(())
+                }
+            },
+            [lhs, Alphabet::Conjunction, rhs] => {
+                if let (Ok(lhs), Ok(rhs)) = (Self::parse(&[lhs]), Self::parse(&[rhs])) {
+                    Ok(Formula::SecondaryFunc {
+                        name: SecondaryFuncName::Conjunction,
+                        lhs: Box::new(lhs),
+                        rhs: Box::new(rhs)
+                    })
+                } else {
+                    Err(())
+                }
+            },
+            _ => Err(())
         }
     }
 }
@@ -276,6 +314,36 @@ mod fmt_tests {
                 }
             ),
             String::from("P → Q ∧ R")
+        );
+    }
+}
+
+#[cfg(test)]
+mod parse_test {
+    use crate::alphabet::Alphabet;
+    use super::{Formula::{self, *}, SecondaryFuncName::*};
+
+    #[test]
+    fn parse_letter() {
+        assert_eq!(
+            Formula::parse(&[Alphabet::Letter('P')]),
+            Ok(Formula::Letter('P'))
+        );
+    }
+
+    #[test]
+    fn parse_true() {
+        assert_eq!(
+            Formula::parse(&[Alphabet::True]),
+            Ok(Formula::True)
+        );
+    }
+
+    #[test]
+    fn parse_false() {
+        assert_eq!(
+            Formula::parse(&[Alphabet::False]),
+            Ok(Formula::False)
         );
     }
 }

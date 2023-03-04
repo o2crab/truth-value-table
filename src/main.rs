@@ -16,10 +16,7 @@ fn main() {
         Alphabet::Letter('S'),
     ];
 
-    for x in formula {
-        print!("{} ", x);
-    }
-    println!();
+    println!("{}", Formula::parse(&formula).unwrap());
 
     let v = vec![
         Alphabet::True,
