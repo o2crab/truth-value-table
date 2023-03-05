@@ -1,30 +1,70 @@
 mod alphabet;
+mod formula;
 
-use alphabet::Alphabet;
+use formula::{Formula, SecondaryFuncName::*};
 
 fn main() {
-    let formula = vec![
-        Alphabet::Letter('P'),
-        Alphabet::Conjunction,
-        Alphabet::Negation,
-        Alphabet::Letter('Q'),
-        Alphabet::Implicature,
-        Alphabet::Letter('R'),
-        Alphabet::Disjunction,
-        Alphabet::Letter('S'),
-    ];
+    let formula =
+        Formula::SecondaryFunc {
+            name: Equivalence,
+            lhs:
+                Box::new(
+                    Formula::SecondaryFunc {
+                        name: Conjunction,
+                        lhs: Box::new(Formula::Letter('P')),
+                        rhs:
+                            Box::new(
+                                Formula::SecondaryFunc {
+                                    name: Conjunction,
+                                    lhs: Box::new(Formula::Letter('Q')),
+                                    rhs: Box::new(Formula::Letter('R'))
+                                }
+                            )
+                        }
+                ),
+            rhs: 
+                Box::new(
+                    Formula::SecondaryFunc {
+                        name: Conjunction,
+                        lhs:
+                            Box::new(
+                                Formula::SecondaryFunc {
+                                    name: Conjunction,
+                                    lhs: Box::new(Formula::Letter('P')),
+                                    rhs: Box::new(Formula::Letter('Q'))
+                                }
+                            ),
+                        rhs: Box::new(Formula::Letter('R'))
+                    }
+                )
+        };
 
-    for x in formula {
-        print!("{} ", x);
-    }
+    print!("{}", formula.truth_value_table());
+
     println!();
 
-    let v = vec![
-        Alphabet::True,
-        Alphabet::False,
-        Alphabet::Equivalence,
-    ];
-    for x in v {
-        println!("{}", x);
-    }
+
+    let f1 =
+    Formula::SecondaryFunc {
+        name: Conjunction,
+        lhs: Box::new(
+            Formula::Negation(Box::new(Formula::Letter('P')))
+        ),
+        rhs: Box::new(
+            Formula::SecondaryFunc {
+                name: Disjunction,
+                lhs: Box::new(Formula::Letter('P')),
+                rhs: Box::new(Formula::Letter('Q'))
+            }
+        )
+    };
+    let f2 =
+    Formula::Letter('Q');
+    let formula =
+    Formula::SecondaryFunc {
+        name: Implicature,
+        lhs: Box::new(f1),
+        rhs: Box::new(f2),
+    };
+    print!("{}", formula.truth_value_table());
 }
