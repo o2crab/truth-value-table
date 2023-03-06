@@ -1,13 +1,5 @@
 use std::collections::{HashMap, BTreeSet};
-use crate::alphabet::Alphabet;
-
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
-pub enum SecondaryFuncName {
-    Conjunction,
-    Disjunction,
-    Implicature,
-    Equivalence,
-}
+pub use crate::alphabet::{Alphabet, SecondaryFuncName};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Formula {
@@ -109,16 +101,9 @@ impl Formula {
         }
     }
 
-    fn precidence(&self) -> usize {
+    fn precedence(&self) -> usize {
         match self {
-            Self::SecondaryFunc { name, ..} => {
-                match name {
-                    SecondaryFuncName::Equivalence => 1, // the lowest precedence
-                    SecondaryFuncName::Implicature => 2,
-                    SecondaryFuncName::Conjunction => 3,
-                    SecondaryFuncName::Disjunction => 3,
-                }
-            },
+            Self::SecondaryFunc { name, ..} => name.precedence(),
             Self::Negation(..)      => 4,
             Self::True              => 5,
             Self::False             => 5,
@@ -132,7 +117,7 @@ impl Formula {
             Self::True => vec![Alphabet::True],
             Self::False => vec![Alphabet::False],
             Self::Negation(sub) => {
-                if sub.precidence() < self.precidence() {
+                if sub.precedence() < self.precedence() {
                     let mut v = vec![
                         Alphabet::Negation,
                         Alphabet::OpenBracket
@@ -157,7 +142,7 @@ impl Formula {
                         SecondaryFuncName::Equivalence => Alphabet::Equivalence,
                     };
                 let lhs =
-                    if lhs.precidence() <= self.precidence() {
+                    if lhs.precedence() <= self.precedence() {
                         let mut v = vec![Alphabet::OpenBracket];
                         let mut lhs = lhs.to_sentence();
                         v.append(&mut lhs);
@@ -167,7 +152,7 @@ impl Formula {
                         lhs.to_sentence()
                     };
                 let mut rhs =
-                    if rhs.precidence() <= self.precidence() {
+                    if rhs.precedence() <= self.precedence() {
                         let mut v = vec![Alphabet::OpenBracket];
                         let mut rhs = rhs.to_sentence();
                         v.append(&mut rhs);
@@ -186,27 +171,138 @@ impl Formula {
     }
 
     // construct a Formula from an array of alphabets
-    pub fn parse(arr: &[crate::alphabet::Alphabet]) -> Result<Self, ()> {
-        match arr {
-            [x] => {
-                match *x {
-                    Alphabet::Letter(c) => Ok(Formula::Letter(c)),
-                    Alphabet::True => Ok(Formula::True),
-                    Alphabet::False => Ok(Formula::False),
-                    _ => Err(())
+    pub fn parse(sentence: &[crate::alphabet::Alphabet]) -> Result<Self, ()> {
+        let mut pos = 0;
+
+        let (mut formula, bracketed) = Self::get_subformula(&sentence, &mut pos)?;
+
+        while pos < sentence.len() {
+            formula =
+            match &sentence[pos] {
+                Alphabet::SecondaryFunc(name) => {
+                    pos += 1;
+                    let (rhs, _bracketed) = Self::get_subformula(sentence, &mut pos)?;
+                    if bracketed || formula.precedence() > name.precedence() {
+                        Formula::SecondaryFunc {
+                            name: *name,
+                            lhs: Box::new(formula),
+                            rhs: Box::new(rhs)
+                        }
+                    } else if formula.precedence() == name.precedence() {
+                        return Err(());
+                    } else { // ! bracketed && formula.precedence() < name.precedence. In this case, formula is SecondaryFunc
+                        if let Self::SecondaryFunc { name: name0, lhs: lhs0, rhs: rhs0 } = formula {
+                            Formula::SecondaryFunc {
+                                name: name0,
+                                lhs: lhs0,
+                                rhs: Box::new(Formula::SecondaryFunc {
+                                    name: *name,
+                                    lhs: rhs0,
+                                    rhs: Box::new(rhs)
+                                })
+                            }
+                        } else {
+                            return Err(());
+                        }
+                    }
+                },
+                _ => {
+                    return Err(());
                 }
-            },
-            [Alphabet::Negation, tail @ ..] => {
-                if let Ok(x) = Self::parse(tail) {
-                    Ok(Formula::Negation(
-                        Box::new(x)
-                    ))
-                } else {
-                    Err(())
-                }
-            },
-            _ => Err(())
+            };
         }
+
+        Ok(formula)
+    }
+
+    fn get_subformula(sentence: &[Alphabet], pos: &mut usize) -> Result<(Self, bool), ()> {
+        if *pos >= sentence.len() {
+            return Err(());
+        }
+
+        match sentence[*pos] {
+            Alphabet::Letter(c) => {
+                *pos += 1;
+                Ok((Self::Letter(c), false))
+            },
+            Alphabet::True => {
+                *pos += 1;
+                Ok((Self::True, false))
+            },
+            Alphabet::False => {
+                *pos += 1;
+                Ok((Self::False, false))
+            },
+            Alphabet::Negation => {
+                *pos += 1;
+                let (subf, _bracketed) = Self::get_subformula(sentence, pos)?;
+                Ok((Self::Negation(Box::new(subf)), false))
+            },
+            Alphabet::OpenBracket => {
+                Ok((Self::get_bracketed(sentence, pos)?, true))
+            },
+            _ => {
+                Err(())
+            }
+        }
+    }
+
+    fn get_bracketed(sentence: &[Alphabet], pos: &mut usize) -> Result<Self, ()> {
+        if *pos >= sentence.len() {
+            return Err(());
+        }
+
+        if sentence[*pos] != Alphabet::OpenBracket {
+            return Err(());
+        }
+        *pos += 1;
+
+        let (mut formula, bracketed) = Self::get_subformula(sentence, pos)?;
+
+        loop {
+            formula =
+            match &sentence[*pos] {
+                Alphabet::SecondaryFunc(name) => {
+                    *pos += 1;
+                    let (rhs, _bracketed) = Self::get_subformula(sentence, pos)?;
+                    if bracketed || formula.precedence() > name.precedence() {
+                        Formula::SecondaryFunc {
+                            name: *name,
+                            lhs: Box::new(formula),
+                            rhs: Box::new(rhs)
+                        }
+                    } else { // ! bracketed && formula.precedence() < name.precedence. In this case, formula is SecondaryFunc
+                        if let Self::SecondaryFunc { name: name0, lhs: lhs0, rhs: rhs0 } = formula {
+                            Formula::SecondaryFunc {
+                                name: name0,
+                                lhs: lhs0,
+                                rhs: Box::new(Formula::SecondaryFunc {
+                                    name: *name,
+                                    lhs: rhs0,
+                                    rhs: Box::new(rhs)
+                                })
+                            }
+                        } else {
+                            return Err(());
+                        }
+                    }
+                },
+                _ => {
+                    return Err(());
+                }
+            };
+
+            if *pos >= sentence.len() {
+                return Err(());
+            }
+
+            if sentence[*pos] == Alphabet::CloseBracket {
+                *pos += 1;
+                break;
+            }
+        }
+
+        Ok(formula)
     }
 }
 
@@ -423,31 +519,87 @@ mod fmt_tests {
 
 #[cfg(test)]
 mod parse_test {
-    use crate::alphabet::Alphabet;
-    use super::{Formula::{self, *}, SecondaryFuncName::*};
+    use super::*;
 
     #[test]
-    fn parse_letter() {
+    fn parse_letters() {
         assert_eq!(
             Formula::parse(&[Alphabet::Letter('P')]),
             Ok(Formula::Letter('P'))
         );
+        assert_eq!(
+            Formula::parse(&[Alphabet::Letter('Q')]),
+            Ok(Formula::Letter('Q'))
+        );
     }
 
     #[test]
-    fn parse_true() {
+    fn parse_truth_values() {
         assert_eq!(
             Formula::parse(&[Alphabet::True]),
             Ok(Formula::True)
         );
-    }
-
-    #[test]
-    fn parse_false() {
         assert_eq!(
             Formula::parse(&[Alphabet::False]),
             Ok(Formula::False)
         );
+    }
+
+    #[test]
+    fn parse_negation() {
+        assert_eq!(
+            Formula::parse(&[
+                Alphabet::Negation,
+                Alphabet::True
+                ]),
+            Ok(Formula::Negation(
+                Box::new(Formula::True)
+            ))
+        );
+    }
+
+    fn parse_secondary_funcs() {
+        let names = [
+            SecondaryFuncName::Conjunction,
+            SecondaryFuncName::Disjunction,
+            SecondaryFuncName::Implicature,
+            SecondaryFuncName::Equivalence,
+        ];
+
+        for name in names {
+            assert_eq!(
+                Formula::parse(&[
+                    Alphabet::Letter('P'),
+                    Alphabet::SecondaryFunc(name),
+                    Alphabet::Letter('Q'),
+                ]),
+                Ok(Formula::SecondaryFunc {
+                    name,
+                    lhs: Box::new(Formula::Letter('P')),
+                    rhs: Box::new(Formula::Letter('Q'))
+                })
+            )
+        }
+    }
+
+    fn parse_brackets() {
+        assert_eq!(
+            Formula::parse(&[
+                Alphabet::Negation,
+                Alphabet::OpenBracket,
+                Alphabet::Letter('P'),
+                Alphabet::SecondaryFunc(SecondaryFuncName::Implicature),
+                Alphabet::Letter('Q'),
+                Alphabet::CloseBracket,
+            ]),
+            Ok(Formula::Negation(
+                Box::new(Formula::SecondaryFunc {
+                    name: SecondaryFuncName::Implicature,
+                    lhs: Box::new(Formula::Letter('P')),
+                    rhs: Box::new(Formula::Letter('Q'))
+                })
+            ))
+        )
     }
 }
 
