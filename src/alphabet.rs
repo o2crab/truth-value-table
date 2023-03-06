@@ -1,25 +1,5 @@
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
-pub enum SecondaryFuncName {
-    Conjunction,
-    Disjunction,
-    Implicature,
-    Equivalence,
-}
-
-impl SecondaryFuncName {
-    pub fn precedence(&self) -> usize {
-        match self {
-            Self::Equivalence => 1,
-            Self::Implicature => 2,
-            Self::Conjunction => 3,
-            Self::Disjunction => 3,
-        }
-    }
-}
-
 // enum Alphabet represents the alphabet of propositional logic.
 // Letter represents a propositional letter.
-#[derive(PartialEq, Eq)]
 pub enum Alphabet {
     OpenBracket,
     CloseBracket,
@@ -31,7 +11,6 @@ pub enum Alphabet {
     Disjunction,
     Implicature,
     Equivalence,
-    SecondaryFunc(SecondaryFuncName),
 }
 
 impl std::fmt::Display for Alphabet {
@@ -47,16 +26,6 @@ impl std::fmt::Display for Alphabet {
             Self::Disjunction   => write!(f, "∨"), // \u{2228}
             Self::Implicature   => write!(f, "→"), // \u{2192}
             Self::Equivalence   => write!(f, "↔"), // \u{2194}
-            Self::SecondaryFunc(name) => {
-                let s =
-                match name {
-                    SecondaryFuncName::Conjunction => "∧", // \u{2227}
-                    SecondaryFuncName::Disjunction => "∨", // \u{2228}
-                    SecondaryFuncName::Implicature => "→", // \u{2192}
-                    SecondaryFuncName::Equivalence => "↔", // \u{2194}
-                };
-                write!(f, "{}", s)
-            },
         }
     }
 }
@@ -71,14 +40,10 @@ impl std::convert::TryFrom<&str> for Alphabet {
             "t" => Ok( Self::True ),
             "f" => Ok( Self::False ),
             "!" => Ok( Self::Negation ),
-            "&" => Ok( Self::SecondaryFunc(SecondaryFuncName::Conjunction)),
-            "|" => Ok( Self::SecondaryFunc(SecondaryFuncName::Disjunction)),
-            "->" => Ok( Self::SecondaryFunc(SecondaryFuncName::Implicature)),
-            "=" => Ok( Self::SecondaryFunc(SecondaryFuncName::Equivalence)),
-            // "&" => Ok( Self::Conjunction ),
-            // "|" => Ok( Self::Disjunction ),
-            // "->" => Ok( Self::Implicature ),
-            // "=" => Ok( Self::Equivalence ),
+            "&" => Ok( Self::Conjunction ),
+            "|" => Ok( Self::Disjunction ),
+            "->" => Ok( Self::Implicature ),
+            "=" => Ok( Self::Equivalence ),
             x if
                 x.chars().count() == 1 &&
                 x.chars().next().unwrap().is_uppercase()
