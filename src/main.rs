@@ -7,7 +7,7 @@ use formula::{Alphabet, Formula};
 
 fn main() {
     println!();
-    println!("===   TRUTH VALUE TABLE CALCULATOR ===");
+    println!("===   TRUTH VALUE TABLE GENERATOR ===");
     println!();
     println!("Available alphabets:");
     println!("  A, B, ..., Z, t, f, !, &, |, ->, =, (, )");
